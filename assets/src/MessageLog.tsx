@@ -35,6 +35,7 @@ export const MessageLog: FC<Props> = ({ messages }) => (
               <TableCell>{message.groupId}</TableCell>
               <TableCell>{message.nodeId}</TableCell>
               <TableCell>{message.messageType}</TableCell>
+              <TableCell>{message.deviceId}</TableCell>
             </TableRow>
           ))}
         </TableBody>
