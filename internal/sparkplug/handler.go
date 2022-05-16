@@ -4,27 +4,28 @@ import (
 	"fmt"
 
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
+	"github.com/sirupsen/logrus"
 )
 
 func HandleMessage(msg store.Message) error {
 	store.AddMessage(msg)
 	switch msg.MessageType {
 	case store.NodeBirth:
-		fmt.Println("NodeBirth")
+		logrus.Debug("NodeBirth")
 	case store.NodeDeath:
-		fmt.Println("NodeDeath")
+		logrus.Debug("NodeDeath")
 	case store.NodeData:
-		fmt.Println("NodeData")
+		logrus.Debug("NodeData")
 	case store.NodeCommand:
-		fmt.Println("NodeCommand")
+		logrus.Debug("NodeCommand")
 	case store.DeviceBirth:
-		fmt.Println("DeviceBirth")
+		logrus.Debug("DeviceBirth")
 	case store.DeviceDeath:
-		fmt.Println("DeviceDeath")
+		logrus.Debug("DeviceDeath")
 	case store.DeviceData:
-		fmt.Println("DeviceData")
+		logrus.Debug("DeviceData")
 	case store.DeviceCommand:
-		fmt.Println("DeviceCommand")
+		logrus.Debug("DeviceCommand")
 	default:
 		return fmt.Errorf("unknown message type: %s", msg.MessageType)
 	}

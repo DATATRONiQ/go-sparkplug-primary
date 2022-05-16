@@ -8,6 +8,7 @@ import (
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
 	"github.com/DATATRONiQ/go-sparkplug-primary/third_party/sparkplugb"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,7 +26,7 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 	opts.SetWill(stateTopic, "OFFLINE", 1, true)
 
 	opts.SetOnConnectHandler(func(c mqtt.Client) {
-		fmt.Println("Connected to MQTT broker")
+		logrus.Debug("Connected to MQTT broker")
 		// as specified in the Sparkplug B Specification
 		c.Publish(stateTopic, 1, true, "ONLINE")
 
@@ -37,10 +38,10 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 		}
 
 		token := c.SubscribeMultiple(nodeTopics, func(c mqtt.Client, m mqtt.Message) {
-			fmt.Println("node message received")
+			logrus.Debug("node message received")
 
 			if m.Payload() == nil {
-				fmt.Printf("Payload is nil for %s\n", m.Topic())
+				logrus.Warnf("Payload is nil for %s\n", m.Topic())
 				return
 			}
 
@@ -49,7 +50,7 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 			var payload sparkplugb.Payload
 			err := proto.Unmarshal(m.Payload(), &payload)
 			if err != nil {
-				fmt.Printf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
+				logrus.Errorf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
 				return
 			}
 
@@ -63,9 +64,9 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 		})
 		token.Wait()
 		if token.Error() != nil {
-			fmt.Println(token.Error())
+			logrus.Debug(token.Error())
 		}
-		fmt.Println("Subscribed to node messages")
+		logrus.Debug("Subscribed to node messages")
 
 		deviceTopics := map[string]byte{
 			fmt.Sprintf("spBv1.0/+/%s/+/+", store.DeviceBirth):   1,
@@ -75,10 +76,10 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 		}
 
 		token = c.SubscribeMultiple(deviceTopics, func(c mqtt.Client, m mqtt.Message) {
-			fmt.Println("device message received")
+			logrus.Debug("device message received")
 
 			if m.Payload() == nil {
-				fmt.Printf("Payload is nil for %s\n", m.Topic())
+				logrus.Warnf("Payload is nil for %s\n", m.Topic())
 				return
 			}
 
@@ -87,7 +88,7 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 			var payload sparkplugb.Payload
 			err := proto.Unmarshal(m.Payload(), &payload)
 			if err != nil {
-				fmt.Printf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
+				logrus.Errorf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
 				return
 			}
 
@@ -102,9 +103,9 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 		})
 		token.Wait()
 		if token.Error() != nil {
-			fmt.Println(token.Error())
+			logrus.Debug(token.Error())
 		}
-		fmt.Println("Subscribed to device messages")
+		logrus.Debug("Subscribed to device messages")
 	})
 
 	client := mqtt.NewClient(opts)
