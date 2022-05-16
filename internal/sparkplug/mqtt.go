@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
+	"github.com/DATATRONiQ/go-sparkplug-primary/third_party/sparkplugb"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"google.golang.org/protobuf/proto"
 )
 
 func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
@@ -27,41 +29,82 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 		// as specified in the Sparkplug B Specification
 		c.Publish(stateTopic, 1, true, "ONLINE")
 
-		token := c.Subscribe("spBv1.0/+/NBIRTH/+", 1, func(c mqtt.Client, m mqtt.Message) {
-			fmt.Println("NBIRTH message received")
+		nodeTopics := map[string]byte{
+			fmt.Sprintf("spBv1.0/+/%s/+", store.NodeBirth):   1,
+			fmt.Sprintf("spBv1.0/+/%s/+", store.NodeDeath):   1,
+			fmt.Sprintf("spBv1.0/+/%s/+", store.NodeData):    1,
+			fmt.Sprintf("spBv1.0/+/%s/+", store.NodeCommand): 1,
+		}
+
+		token := c.SubscribeMultiple(nodeTopics, func(c mqtt.Client, m mqtt.Message) {
+			fmt.Println("node message received")
+
+			if m.Payload() == nil {
+				fmt.Printf("Payload is nil for %s\n", m.Topic())
+				return
+			}
 
 			topicParts := strings.Split(m.Topic(), "/")
 
-			store.AddMessage(store.Message{
+			var payload sparkplugb.Payload
+			err := proto.Unmarshal(m.Payload(), &payload)
+			if err != nil {
+				fmt.Printf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
+				return
+			}
+
+			HandleMessage(store.Message{
 				ReceivedAt:  time.Now(),
 				GroupID:     topicParts[1],
+				MessageType: store.MessageType(topicParts[2]),
 				NodeID:      topicParts[3],
-				MessageType: "NBIRTH",
+				Payload:     &payload,
 			})
 		})
 		token.Wait()
 		if token.Error() != nil {
 			fmt.Println(token.Error())
 		}
-		fmt.Println("Subscribed to NBIRTH messages")
+		fmt.Println("Subscribed to node messages")
 
-		token = c.Subscribe("spBv1.0/+/NDEATH/+", 1, func(c mqtt.Client, m mqtt.Message) {
-			fmt.Println("NDEATH message received")
+		deviceTopics := map[string]byte{
+			fmt.Sprintf("spBv1.0/+/%s/+/+", store.DeviceBirth):   1,
+			fmt.Sprintf("spBv1.0/+/%s/+/+", store.DeviceDeath):   1,
+			fmt.Sprintf("spBv1.0/+/%s/+/+", store.DeviceData):    1,
+			fmt.Sprintf("spBv1.0/+/%s/+/+", store.DeviceCommand): 1,
+		}
+
+		token = c.SubscribeMultiple(deviceTopics, func(c mqtt.Client, m mqtt.Message) {
+			fmt.Println("device message received")
+
+			if m.Payload() == nil {
+				fmt.Printf("Payload is nil for %s\n", m.Topic())
+				return
+			}
 
 			topicParts := strings.Split(m.Topic(), "/")
 
-			store.AddMessage(store.Message{
+			var payload sparkplugb.Payload
+			err := proto.Unmarshal(m.Payload(), &payload)
+			if err != nil {
+				fmt.Printf("Failed to unmarshal node message payload of topic %s: %v", m.Topic(), err)
+				return
+			}
+
+			HandleMessage(store.Message{
 				ReceivedAt:  time.Now(),
 				GroupID:     topicParts[1],
+				MessageType: store.MessageType(topicParts[2]),
 				NodeID:      topicParts[3],
-				MessageType: "NDEATH",
+				DeviceID:    topicParts[4],
+				Payload:     &payload,
 			})
 		})
 		token.Wait()
 		if token.Error() != nil {
 			fmt.Println(token.Error())
 		}
-		fmt.Println("Subscribed to NDEATH messages")
+		fmt.Println("Subscribed to device messages")
 	})
 
 	client := mqtt.NewClient(opts)
