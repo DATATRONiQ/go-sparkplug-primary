@@ -3,10 +3,11 @@ package server
 import (
 	"net/http"
 
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
-func setRouter() *gin.Engine {
+func setRouter(sm *store.StoreManager) *gin.Engine {
 	// Creates default gin router with Logger and Recovery middleware already attached
 	router := gin.Default()
 
@@ -20,6 +21,12 @@ func setRouter() *gin.Engine {
 	}
 
 	api.GET("/messages", indexMessages)
+	api.GET("/groups", func(ctx *gin.Context) {
+		groups := sm.Fetch()
+		ctx.JSON(http.StatusOK, gin.H{
+			"data": groups,
+		})
+	})
 
 	router.NoRoute(func(ctx *gin.Context) { ctx.JSON(http.StatusNotFound, gin.H{}) })
 

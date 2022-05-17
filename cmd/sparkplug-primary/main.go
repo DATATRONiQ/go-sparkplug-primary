@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/server"
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/sparkplug"
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
 )
 
@@ -21,8 +22,10 @@ func main() {
 
 	util.InitLogger(logFormat, logFile, logLevel)
 
-	// TODO: Make configurable
-	go sparkplug.StartMQTTClient(mqttEndpoint, mqttClientID, sparkplugHostID, mqttUsername, mqttPassword)
+	msgChan := make(chan store.Message, 100)
+	storeManager := store.NewStoreManager(msgChan)
 
-	server.Start()
+	go sparkplug.StartMQTTClient(mqttEndpoint, mqttClientID, sparkplugHostID, mqttUsername, mqttPassword, msgChan)
+
+	server.Start(storeManager)
 }

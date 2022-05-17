@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
+func StartMQTTClient(endpoint, clientID, hostID, user, pass string, msgChan chan<- store.Message) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(endpoint)
 	if user != "" {
@@ -54,13 +54,13 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 				return
 			}
 
-			HandleMessage(store.Message{
-				ReceivedAt:  time.Now(),
-				GroupID:     topicParts[1],
-				MessageType: store.MessageType(topicParts[2]),
-				NodeID:      topicParts[3],
-				Payload:     &payload,
-			})
+			msgChan <- store.Message{
+				ReceivedAt: time.Now(),
+				GroupID:    topicParts[1],
+				Type:       store.Type(topicParts[2]),
+				NodeID:     topicParts[3],
+				Payload:    &payload,
+			}
 		})
 		token.Wait()
 		if token.Error() != nil {
@@ -92,14 +92,14 @@ func StartMQTTClient(endpoint, clientID, hostID, user, pass string) {
 				return
 			}
 
-			HandleMessage(store.Message{
-				ReceivedAt:  time.Now(),
-				GroupID:     topicParts[1],
-				MessageType: store.MessageType(topicParts[2]),
-				NodeID:      topicParts[3],
-				DeviceID:    topicParts[4],
-				Payload:     &payload,
-			})
+			msgChan <- store.Message{
+				ReceivedAt: time.Now(),
+				GroupID:    topicParts[1],
+				Type:       store.Type(topicParts[2]),
+				NodeID:     topicParts[3],
+				DeviceID:   topicParts[4],
+				Payload:    &payload,
+			}
 		})
 		token.Wait()
 		if token.Error() != nil {
