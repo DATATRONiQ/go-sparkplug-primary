@@ -7,19 +7,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Manages the state of a single sparkplug group
 type GroupManager struct {
-	GroupID       string
-	mu            sync.RWMutex
-	LastMessageAt time.Time
-	Nodes         map[string]*NodeManager
+	GroupID       string                  // The group ID
+	LastMessageAt time.Time               // The last time a message was received regarding this group
+	Nodes         map[string]*NodeManager // The node managers for each node in the group
+
+	mu sync.RWMutex
 }
 
+// The data structure returned by the Fetch() method
 type FetchedGroup struct {
-	ID            string        `json:"id"`
-	LastMessageAt time.Time     `json:"lastMessageAt"`
-	Nodes         []FetchedNode `json:"nodes"`
+	ID            string        `json:"id"`            // The group ID
+	LastMessageAt time.Time     `json:"lastMessageAt"` // The last time a message was received regarding this group
+	Nodes         []FetchedNode `json:"nodes"`         // The state of the nodes in the group
 }
 
+// Creates a new group manager for the given group ID
 func NewGroupManager(groupID string) *GroupManager {
 	return &GroupManager{
 		GroupID:       groupID,
@@ -60,6 +64,39 @@ func (gm *GroupManager) nodeDeath(msg Message) {
 	nodeManager.nodeDeath(msg)
 }
 
+func (gm *GroupManager) deviceBirth(msg Message) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	nodeManager, ok := gm.Nodes[msg.NodeID]
+	if !ok {
+		logrus.Debugf("DBIRTH: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
+		return
+	}
+
+	if msg.ReceivedAt.After(gm.LastMessageAt) {
+		gm.LastMessageAt = msg.ReceivedAt
+	}
+	nodeManager.deviceBirth(msg)
+}
+
+func (gm *GroupManager) deviceDeath(msg Message) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	nodeManager, ok := gm.Nodes[msg.NodeID]
+	if !ok {
+		logrus.Debugf("DDEATH: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
+		return
+	}
+
+	if msg.ReceivedAt.After(gm.LastMessageAt) {
+		gm.LastMessageAt = msg.ReceivedAt
+	}
+	nodeManager.deviceDeath(msg)
+}
+
+// Returns the current state of the group and its nodes
 func (gm *GroupManager) Fetch() *FetchedGroup {
 	gm.mu.RLock()
 	defer gm.mu.RUnlock()

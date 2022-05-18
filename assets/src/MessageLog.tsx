@@ -1,24 +1,22 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import {
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
 import { FC } from "react";
-import { Todo } from "./util";
-
-interface Message {
-  receivedAt: string;
-  groupId: string;
-  nodeId: string;
-  messageType: string;
-  deviceId: string;
-  payload: Todo;
-}
+import { FetchedMessage } from "../api/message";
 
 interface Props {
-  messages: Message[];
+  messages: FetchedMessage[];
 }
 
 export const MessageLog: FC<Props> = ({ messages }) => (
-  <div style={{
-  }}>
-    <h1>Message Log</h1>
+  <div style={{}}>
+    <h2>Message Log</h2>
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }}>
         <TableHead>
@@ -34,7 +32,7 @@ export const MessageLog: FC<Props> = ({ messages }) => (
               <TableCell>{message.receivedAt}</TableCell>
               <TableCell>{message.groupId}</TableCell>
               <TableCell>{message.nodeId}</TableCell>
-              <TableCell>{message.messageType}</TableCell>
+              <TableCell>{message.type}</TableCell>
               <TableCell>{message.deviceId}</TableCell>
             </TableRow>
           ))}

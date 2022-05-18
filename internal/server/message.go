@@ -8,7 +8,7 @@ import (
 )
 
 func indexMessages(ctx *gin.Context) {
-	messages := store.FetchMessages()
+	messages := store.Fetch()
 	ctx.JSON(http.StatusOK, gin.H{
 		"data": messages,
 	})

@@ -7,6 +7,7 @@ import (
 	"github.com/DATATRONiQ/go-sparkplug-primary/third_party/sparkplugb"
 )
 
+// The sparkplug-B message type for node and device messages
 type Type string
 
 const (
@@ -30,13 +31,14 @@ type Message struct {
 	Payload    *sparkplugb.Payload
 }
 
+// The data structure returned by the Fetch() method
 type FetchedMessage struct {
-	GroupID      string    `json:"groupId"`
-	NodeID       string    `json:"nodeId"`
-	DeviceID     string    `json:"deviceId"`
-	Type         Type      `json:"type"`
-	MetricAmount int       `json:"metricAmount"`
-	ReceivedAt   time.Time `json:"receivedAt"`
+	GroupID      string    `json:"groupId"`      // The group ID
+	NodeID       string    `json:"nodeId"`       // The node ID
+	DeviceID     string    `json:"deviceId"`     // The device ID
+	Type         Type      `json:"type"`         // The message type
+	MetricAmount int       `json:"metricAmount"` // The amount of metrics in the message
+	ReceivedAt   time.Time `json:"receivedAt"`   // The time the message was received
 }
 
 // basically our in-memory database
@@ -49,7 +51,8 @@ func addMessage(msg Message) {
 	msgLog = append(msgLog, msg)
 }
 
-func FetchMessages() *[]FetchedMessage {
+// Returns all messages received since the start of the application
+func Fetch() *[]FetchedMessage {
 	msgLogMutex.RLock()
 	defer msgLogMutex.RUnlock()
 

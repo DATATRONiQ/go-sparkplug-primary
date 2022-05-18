@@ -46,6 +46,20 @@ func (sm *StoreManager) processMessage(msg Message) {
 			return
 		}
 		groupManager.nodeDeath(msg)
+	case DeviceBirth:
+		groupManager, ok := sm.Groups[msg.GroupID]
+		if !ok {
+			logrus.Debugf("DBIRTH: Group %s is currently not in store", msg.GroupID)
+			return
+		}
+		groupManager.deviceBirth(msg)
+	case DeviceDeath:
+		groupManager, ok := sm.Groups[msg.GroupID]
+		if !ok {
+			logrus.Debugf("DDEATH: Group %s is currently not in store", msg.GroupID)
+			return
+		}
+		groupManager.deviceDeath(msg)
 	default:
 		logrus.Warnf("Unimplemented message type: %s", msg.Type)
 	}
