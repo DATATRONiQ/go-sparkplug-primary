@@ -7,14 +7,14 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { FC } from "react";
+import React from "react";
 import { FetchedMessage } from "../api/message";
 
 interface Props {
   messages: FetchedMessage[];
 }
 
-export const MessageLog: FC<Props> = ({ messages }) => (
+export const MessageLog: React.FC<Props> = ({ messages }) => (
   <div style={{}}>
     <h2>Message Log</h2>
     <TableContainer component={Paper}>

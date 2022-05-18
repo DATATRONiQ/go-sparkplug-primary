@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import { MessageLog } from "./MessageLog";
-import { OnlineStatus } from "./OnlineStatus";
 import { FetchedMessage, GetMessagesResponse } from "../api/message";
 import { FetchedGroup, GetGroupsResponse } from "../api/store";
 import { Grid } from "@mui/material";
+import { MetricTable } from "./MetricTable";
 
-function App() {
+export const App: React.FC = () => {
   const [messages, setMessages] = useState<FetchedMessage[]>([]);
   const [groups, setGroups] = useState<FetchedGroup[]>([]);
 
@@ -30,14 +30,12 @@ function App() {
     <div className="App">
       <Grid container spacing={2}>
         <Grid item xs={12} lg={6}>
-          <OnlineStatus groups={groups} />
+          <MetricTable groups={groups} />
         </Grid>
-        <Grid item xs={12} lg={6} >
+        <Grid item xs={12} lg={6}>
           <MessageLog messages={messages} />
         </Grid>
       </Grid>
     </div>
   );
 }
-
-export default App;
