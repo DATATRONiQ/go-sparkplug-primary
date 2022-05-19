@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,9 +102,11 @@ func (gm *GroupManager) Fetch() *FetchedGroup {
 	gm.mu.RLock()
 	defer gm.mu.RUnlock()
 
+	sortedNodeIDs := util.SortedKeys(gm.Nodes)
 	nodes := make([]FetchedNode, 0, len(gm.Nodes))
-	for _, nodeManager := range gm.Nodes {
-		nodes = append(nodes, *nodeManager.Fetch())
+	for _, nodeID := range sortedNodeIDs {
+		fetchedNode := gm.Nodes[nodeID].Fetch()
+		nodes = append(nodes, *fetchedNode)
 	}
 
 	return &FetchedGroup{

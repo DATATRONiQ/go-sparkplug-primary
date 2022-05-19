@@ -22,17 +22,17 @@ export const App: React.FC = () => {
   // TODO: Solve with server sent events (SSE) or websocket
 
   useEffect(() => {
-    const interval = setInterval(refresh, 2000);
+    const interval = setInterval(refresh, 10000);
     return () => clearInterval(interval);
   }, [refresh]);
 
   return (
     <div className="App">
       <Grid container spacing={2}>
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12} lg={8}>
           <MetricTable groups={groups} />
         </Grid>
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12} lg={4}>
           <MessageLog messages={messages} />
         </Grid>
       </Grid>
