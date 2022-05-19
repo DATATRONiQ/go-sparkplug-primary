@@ -3,11 +3,27 @@ interface BaseEntity {
   lastMessageAt: string;
 }
 
+export type DataType =
+| "Int8"
+| "Int16"
+| "Int32"
+| "Int64"
+| "UInt8"
+| "UInt16"
+| "UInt32"
+| "UInt64"
+| "Float"
+| "Double"
+| "Boolean"
+| "String"
+| "Text"
+| "UUID"
+
 export interface FetchedMetric {
   name: string;
   alias: number;
   stale: boolean;
-  dataType: string;
+  dataType: DataType;
   timestamp: string;
   isNull: boolean;
   value: any;

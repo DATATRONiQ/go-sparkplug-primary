@@ -17,10 +17,8 @@ interface Props {
   groups: FetchedGroup[];
 }
 
-interface MetricDataEntry {
+interface MetricDataEntry extends Pick<FetchedMetric, "name" | "alias" | "dataType" | "value">{
   id: string;
-  name: string;
-  alias: number;
   type: "metric";
   groupId: string;
   nodeId: string;
@@ -84,6 +82,8 @@ const createMetricData = (
     deviceId,
     online: metric.stale === false,
     lastMessage: new Date(metric.timestamp),
+    dataType: metric.dataType,
+    value: metric.value,
   };
 };
 
@@ -96,7 +96,9 @@ const createDeviceData = (devices: FetchedDevice[]): DeviceDataEntry[] =>
     deviceId: device.id,
     online: device.online,
     lastMessage: new Date(device.lastMessageAt),
-    _children: device.metrics.map((metric) => createMetricData(metric, device.groupId, device.nodeId, device.id)),
+    _children: device.metrics.map((metric) =>
+      createMetricData(metric, device.groupId, device.nodeId, device.id)
+    ),
   }));
 
 const createNodeData = (nodes: FetchedNode[]): NodeDataEntry[] =>
@@ -145,9 +147,43 @@ const lastMessageFormatter = (cell: Tabulator.CellComponent): string => {
   return data.lastMessage.toISOString();
 };
 
+const valueFormatter = (cell: Tabulator.CellComponent): string => {
+  const data = cell.getData() as DataEntry;
+  if (data.type !== "metric") {
+    return "";
+  }
+  if (data.value === null) {
+    return "null";
+  }
+
+  switch (data.dataType) {
+    case "Int8":
+    case "Int16":
+    case "Int32":
+    case "Int64":
+    case "UInt8":
+    case "UInt16":
+    case "UInt32":
+    case "UInt64":
+    case "Float":
+    case "Double":
+      return data.value;
+    case "Boolean":
+      return data.value ? "true" : "false";
+    case "String":
+    case "Text":
+    case "UUID":
+      return data.value;
+    default:
+      return "";
+  }
+};
+
 const columns: ColumnDefinition[] = [
   { title: "ID", field: "id", formatter: idFormatter },
   { title: "Online", field: "online", formatter: "tickCross" },
+  { title: "Data-Type", field: "dataType" },
+  { title: "Value", field: "value", formatter: valueFormatter },
   {
     title: "Last Message",
     field: "lastMessage",
