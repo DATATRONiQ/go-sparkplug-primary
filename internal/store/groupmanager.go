@@ -49,6 +49,22 @@ func (gm *GroupManager) nodeBirth(msg Message) {
 	nodeManager.nodeBirth(msg)
 }
 
+func (gm *GroupManager) nodeData(msg Message) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	nodeManager, ok := gm.Nodes[msg.NodeID]
+	if !ok {
+		logrus.Debugf("NDATA: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
+		return
+	}
+
+	if msg.ReceivedAt.After(gm.LastMessageAt) {
+		gm.LastMessageAt = msg.ReceivedAt
+	}
+	nodeManager.nodeData(msg)
+}
+
 func (gm *GroupManager) nodeDeath(msg Message) {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
@@ -79,6 +95,22 @@ func (gm *GroupManager) deviceBirth(msg Message) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
 	nodeManager.deviceBirth(msg)
+}
+
+func (gm *GroupManager) deviceData(msg Message) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	nodeManager, ok := gm.Nodes[msg.NodeID]
+	if !ok {
+		logrus.Debugf("DDATA: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
+		return
+	}
+
+	if msg.ReceivedAt.After(gm.LastMessageAt) {
+		gm.LastMessageAt = msg.ReceivedAt
+	}
+	nodeManager.deviceData(msg)
 }
 
 func (gm *GroupManager) deviceDeath(msg Message) {

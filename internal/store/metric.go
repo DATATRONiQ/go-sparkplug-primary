@@ -63,7 +63,7 @@ func NewMetric(metric *sparkplugb.Payload_Metric) (*Metric, error) {
 		return nil, err
 	}
 
-	return &newMetric, nil
+	return &newMetric, err
 }
 
 func (m *Metric) addValue(metric *sparkplugb.Payload_Metric) error {
@@ -106,6 +106,31 @@ func (m *Metric) addValue(metric *sparkplugb.Payload_Metric) error {
 		return fmt.Errorf("unsupported data type: %s", m.DataType.String())
 	}
 	return nil
+}
+
+func (m *Metric) Update(metric *sparkplugb.Payload_Metric) error {
+	if metric == nil {
+		return fmt.Errorf("metric is nil")
+	}
+	if *metric.Alias != m.Alias {
+		return fmt.Errorf("metric alias mismatch")
+	}
+	if metric.Timestamp != nil {
+		ts := time.UnixMilli(int64(*metric.Timestamp))
+		m.LastTimeStamp = &ts
+	}
+
+	// only when IsNull exists in the payload and its value is true
+	newIsNull := metric.IsNull != nil && *metric.IsNull
+
+	if newIsNull {
+		m.IsNull = true
+		m.Value = nil
+		return nil
+	}
+
+	m.IsNull = false
+	return m.addValue(metric)
 }
 
 func (m *Metric) Fetch(isStale bool) *FetchedMetric {

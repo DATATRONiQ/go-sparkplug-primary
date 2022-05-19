@@ -46,12 +46,12 @@ func (nm *NodeManager) nodeBirth(msg Message) {
 	defer nm.mu.Unlock()
 
 	if msg.Payload == nil {
-		logrus.Warnf("NBIRTH: Node %s has no payload", nm.NodeID)
+		logrus.Warnf("NBIRTH: Node %s got message with nil payload", nm.NodeID)
 		return
 	}
 
-	if msg.Payload.Metrics == nil {
-		logrus.Warnf("NBIRTH: Node %s has no metrics", nm.NodeID)
+	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
+		logrus.Warnf("NBIRTH: Node %s got message with no metrics (not even bdSeq)", nm.NodeID)
 		return
 	}
 
@@ -68,19 +68,67 @@ func (nm *NodeManager) nodeBirth(msg Message) {
 		alias := metric.Alias
 		if alias == nil {
 			if metric.Name == nil {
-				logrus.Warnf("NBIRTH: Node %s has no alias for metric with nil name", nm.NodeID)
+				logrus.Warnf("NBIRTH: Node %s got metric with nil name and alias", nm.NodeID)
 			} else {
-				logrus.Warnf("NBIRTH: Node %s has no alias for metric %s", nm.NodeID, *metric.Name)
+				logrus.Warnf("NBIRTH: Node %s got metric with nil alias and name: %s", nm.NodeID, *metric.Name)
 			}
 			continue
 		}
 
 		newMetric, err := NewMetric(metric)
 		if err != nil {
-			logrus.Warnf("NBIRTH: Node %s has an invalid metric %d: %s", nm.NodeID, metric.Name, err)
+			if metric.Name == nil {
+				logrus.Warnf("NBIRTH: Node %s got an invalid metric with alias %d and name %s: %v", nm.NodeID, *metric.Alias, *metric.Name, err)
+			} else {
+				logrus.Warnf("NBIRTH: Node %s got an invalid metric with alias %d: %v", nm.NodeID, *metric.Name, err)
+			}
 			continue
 		}
 		nm.Metrics[*alias] = newMetric
+	}
+}
+
+func (nm *NodeManager) nodeData(msg Message) {
+	nm.mu.Lock()
+	defer nm.mu.Unlock()
+
+	// TODO: Check seq number
+
+	if msg.Payload == nil {
+		logrus.Warnf("NDATA: Node %s got message with nil payload", nm.NodeID)
+		return
+	}
+
+	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
+		logrus.Warnf("NDATA: Node %s got message with no metrics", nm.NodeID)
+		return
+	}
+
+	if msg.ReceivedAt.After(nm.LastMessageAt) {
+		nm.LastMessageAt = msg.ReceivedAt
+	}
+
+	for _, metric := range msg.Payload.Metrics {
+		alias := metric.Alias
+		if alias == nil {
+			if metric.Name == nil {
+				logrus.Warnf("NDATA: Node %s got metric with nil name and alias", nm.NodeID)
+			} else {
+				logrus.Warnf("NDATA: Node %s got metric with nil alias and name: %s", nm.NodeID, *metric.Name)
+			}
+			continue
+		}
+
+		currMetric, ok := nm.Metrics[*alias]
+		if !ok {
+			logrus.Warnf("NDATA: Node %s got metric with unknown alias %d", nm.NodeID, *alias)
+			continue
+		}
+
+		err := currMetric.Update(metric)
+		if err != nil {
+			logrus.Warnf("NDATA: Node %s got an invalid metric with name %s: %v", nm.NodeID, currMetric.Name, err)
+		}
 	}
 }
 
@@ -114,6 +162,22 @@ func (nm *NodeManager) deviceBirth(msg Message) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
 	deviceManager.deviceBirth(msg)
+}
+
+func (nm *NodeManager) deviceData(msg Message) {
+	nm.mu.Lock()
+	defer nm.mu.Unlock()
+
+	deviceManager, ok := nm.Devices[msg.DeviceID]
+	if !ok {
+		logrus.Debugf("DDATA: Device %s is currently not in node %s", msg.NodeID, nm.NodeID)
+		return
+	}
+
+	if msg.ReceivedAt.After(nm.LastMessageAt) {
+		nm.LastMessageAt = msg.ReceivedAt
+	}
+	deviceManager.deviceData(msg)
 }
 
 func (nm *NodeManager) deviceDeath(msg Message) {

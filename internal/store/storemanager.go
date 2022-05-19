@@ -39,6 +39,13 @@ func (sm *StoreManager) processMessage(msg Message) {
 			groupManager = sm.Groups[msg.GroupID]
 		}
 		groupManager.nodeBirth(msg)
+	case NodeData:
+		groupManager, ok := sm.Groups[msg.GroupID]
+		if !ok {
+			logrus.Debugf("NDATA: Group %s is currently not in store", msg.GroupID)
+			return
+		}
+		groupManager.nodeData(msg)
 	case NodeDeath:
 		groupManager, ok := sm.Groups[msg.GroupID]
 		if !ok {
@@ -53,6 +60,13 @@ func (sm *StoreManager) processMessage(msg Message) {
 			return
 		}
 		groupManager.deviceBirth(msg)
+	case DeviceData:
+		groupManager, ok := sm.Groups[msg.GroupID]
+		if !ok {
+			logrus.Debugf("DDATA: Group %s is currently not in store", msg.GroupID)
+			return
+		}
+		groupManager.deviceData(msg)
 	case DeviceDeath:
 		groupManager, ok := sm.Groups[msg.GroupID]
 		if !ok {

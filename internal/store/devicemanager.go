@@ -72,6 +72,48 @@ func (dm *DeviceManager) deviceBirth(msg Message) {
 	}
 }
 
+func (dm *DeviceManager) deviceData(msg Message) {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	if msg.Payload == nil {
+		logrus.Warnf("DDATA: Device %s got message with nil payload", dm.DeviceID)
+		return
+	}
+
+	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
+		logrus.Warnf("DDATA: Device %s got message with no metrics", dm.DeviceID)
+		return
+	}
+
+	if msg.ReceivedAt.After(dm.LastMessageAt) {
+		dm.LastMessageAt = msg.ReceivedAt
+	}
+
+	for _, metric := range msg.Payload.Metrics {
+		alias := metric.Alias
+		if alias == nil {
+			if metric.Name == nil {
+				logrus.Warnf("DDATA: Device %s got metric with nil name and alias", dm.DeviceID)
+			} else {
+				logrus.Warnf("DDATA: Device %s got metric with nil alias and name: %s", dm.DeviceID, *metric.Name)
+			}
+			continue
+		}
+
+		currMetric, ok := dm.Metrics[*alias]
+		if !ok {
+			logrus.Warnf("DDATA: Device %s got metric with unknown alias %d", dm.DeviceID, *alias)
+			continue
+		}
+
+		err := currMetric.Update(metric)
+		if err != nil {
+			logrus.Warnf("DDATA: Device %s got an invalid metric with name %s: %v", dm.DeviceID, currMetric.Name, err)
+		}
+	}
+}
+
 func (dm *DeviceManager) deviceDeath(msg Message) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
