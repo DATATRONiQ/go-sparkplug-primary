@@ -78,7 +78,6 @@ func (nm *NodeManager) nodeBirth(msg Message) *api.Event {
 		nm.Metrics[*alias] = newMetric
 	}
 
-	// TODO
 	return &api.Event{
 		Event:     string(NodeBirth),
 		Timestamp: nm.LastMessageAt,
@@ -132,8 +131,14 @@ func (nm *NodeManager) nodeData(msg Message) *api.Event {
 		}
 	}
 
-	// TODO
-	return nil
+	return &api.Event{
+		Event:     string(NodeData),
+		Timestamp: nm.LastMessageAt,
+		Data: api.NodeDataEvent{
+			Node:        *nm.toApiNode(),
+			NodeMetrics: *nm.getMetrics(),
+		},
+	}
 }
 
 func (nm *NodeManager) nodeDeath(msg Message) *api.Event {
@@ -148,7 +153,7 @@ func (nm *NodeManager) nodeDeath(msg Message) *api.Event {
 	nm.Online = false
 
 	for _, device := range nm.Devices {
-		device.offline()
+		device.Offline()
 	}
 
 	return &api.Event{
@@ -170,13 +175,25 @@ func (nm *NodeManager) deviceBirth(msg Message) *api.Event {
 		deviceManager = nm.Devices[msg.DeviceID]
 	}
 
+	fullDevice := deviceManager.deviceBirth(msg)
+
+	if fullDevice == nil {
+		return nil
+	}
+
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
-	deviceManager.deviceBirth(msg)
 
-	// TODO
-	return nil
+	return &api.Event{
+		Event:     string(DeviceBirth),
+		Timestamp: nm.LastMessageAt,
+		Data: api.DeviceBirthEvent{
+			Node:          *nm.toApiNode(),
+			Device:        fullDevice.Device,
+			DeviceMetrics: fullDevice.Metrics,
+		},
+	}
 }
 
 func (nm *NodeManager) deviceData(msg Message) *api.Event {
@@ -192,10 +209,19 @@ func (nm *NodeManager) deviceData(msg Message) *api.Event {
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
-	deviceManager.deviceData(msg)
+	deviceMetrics := deviceManager.deviceData(msg)
+	if deviceMetrics == nil {
+		return nil
+	}
 
-	// TODO
-	return nil
+	return &api.Event{
+		Event:     string(DeviceData),
+		Timestamp: nm.LastMessageAt,
+		Data: api.DeviceDataEvent{
+			Node:          *nm.toApiNode(),
+			DeviceMetrics: *deviceMetrics,
+		},
+	}
 }
 
 func (nm *NodeManager) deviceDeath(msg Message) *api.Event {
@@ -211,10 +237,20 @@ func (nm *NodeManager) deviceDeath(msg Message) *api.Event {
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
-	deviceManager.deviceDeath(msg)
+	device := deviceManager.deviceDeath(msg)
 
-	// TODO
-	return nil
+	if device == nil {
+		return nil
+	}
+
+	return &api.Event{
+		Event:     string(DeviceDeath),
+		Timestamp: nm.LastMessageAt,
+		Data: api.DeviceDeathEvent{
+			Node:   *nm.toApiNode(),
+			Device: *device,
+		},
+	}
 }
 
 func (nm *NodeManager) getMetrics() *[]api.Metric {
@@ -234,13 +270,13 @@ func (nm *NodeManager) toApiNode() *api.Node {
 }
 
 // Returns the current state of the node and its devices
-func (nm *NodeManager) Fetch() *api.FullNode {
+func (nm *NodeManager) FetchFull() *api.FullNode {
 	nm.mu.RLock()
 	defer nm.mu.RUnlock()
 
 	sortedDeviceIDs := util.SortedKeys(nm.Devices)
 	devices := util.MapSlice(sortedDeviceIDs, func(deviceID string) api.FullDevice {
-		return *nm.Devices[deviceID].Fetch()
+		return *nm.Devices[deviceID].FetchFull()
 	})
 
 	return &api.FullNode{

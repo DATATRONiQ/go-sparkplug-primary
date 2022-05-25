@@ -101,12 +101,12 @@ func (sm *StoreManager) sendEvent(event *api.Event) {
 func (sm *StoreManager) fetch() *[]api.FullGroup {
 	fetchedGroups := make([]api.FullGroup, 0)
 	for _, groupManager := range sm.Groups {
-		fetchedGroups = append(fetchedGroups, *groupManager.Fetch())
+		fetchedGroups = append(fetchedGroups, *groupManager.FetchFull())
 	}
 	return &fetchedGroups
 }
 
-func (sm *StoreManager) Fetch() *[]api.FullGroup {
+func (sm *StoreManager) FetchFull() *[]api.FullGroup {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 

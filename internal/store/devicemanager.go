@@ -31,7 +31,7 @@ func NewDeviceManager(groupID, nodeID, deviceID string) *DeviceManager {
 	}
 }
 
-func (dm *DeviceManager) deviceBirth(msg Message) {
+func (dm *DeviceManager) deviceBirth(msg Message) *api.FullDevice {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
@@ -60,20 +60,22 @@ func (dm *DeviceManager) deviceBirth(msg Message) {
 		}
 		dm.Metrics[*alias] = newMetric
 	}
+
+	return dm.fetch()
 }
 
-func (dm *DeviceManager) deviceData(msg Message) {
+func (dm *DeviceManager) deviceData(msg Message) *[]api.Metric {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
 	if msg.Payload == nil {
 		logrus.Warnf("DDATA: Device %s got message with nil payload", dm.DeviceID)
-		return
+		return nil
 	}
 
 	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
 		logrus.Warnf("DDATA: Device %s got message with no metrics", dm.DeviceID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(dm.LastMessageAt) {
@@ -102,9 +104,11 @@ func (dm *DeviceManager) deviceData(msg Message) {
 			logrus.Warnf("DDATA: Device %s got an invalid metric with name %s: %v", dm.DeviceID, currMetric.Name, err)
 		}
 	}
+
+	return dm.fetchMetrics(!dm.Online)
 }
 
-func (dm *DeviceManager) deviceDeath(msg Message) {
+func (dm *DeviceManager) deviceDeath(msg Message) *api.Device {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
@@ -112,28 +116,37 @@ func (dm *DeviceManager) deviceDeath(msg Message) {
 		dm.LastMessageAt = msg.ReceivedAt
 	}
 	dm.Online = false
+	return dm.toApiDevice()
 }
 
-func (dm *DeviceManager) offline() {
+func (dm *DeviceManager) Offline() {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
 	dm.Online = false
 }
 
+func (dm *DeviceManager) toApiDevice() *api.Device {
+	return &api.Device{
+		GroupID: dm.GroupID,
+		NodeID:  dm.NodeID,
+		ID:      dm.DeviceID,
+		Online:  dm.Online,
+	}
+}
+
 // Returns the current state of the device
-func (dm *DeviceManager) Fetch() *api.FullDevice {
+func (dm *DeviceManager) fetch() *api.FullDevice {
+	return &api.FullDevice{
+		Device:  *dm.toApiDevice(),
+		Metrics: *dm.fetchMetrics(!dm.Online),
+	}
+}
+
+// Returns the current state of the device
+func (dm *DeviceManager) FetchFull() *api.FullDevice {
 	dm.mu.RLock()
 	defer dm.mu.RUnlock()
 
-	return &api.FullDevice{
-		Device: api.Device{
-			ID:            dm.DeviceID,
-			NodeID:        dm.NodeID,
-			GroupID:       dm.GroupID,
-			Online:        dm.Online,
-			LastMessageAt: dm.LastMessageAt,
-		},
-		Metrics: *dm.fetchMetrics(!dm.Online),
-	}
+	return dm.fetch()
 }

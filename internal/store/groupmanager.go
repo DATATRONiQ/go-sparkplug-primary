@@ -124,13 +124,13 @@ func (gm *GroupManager) deviceDeath(msg Message) *api.Event {
 }
 
 // Returns the current state of the group and its nodes
-func (gm *GroupManager) Fetch() *api.FullGroup {
+func (gm *GroupManager) FetchFull() *api.FullGroup {
 	gm.mu.RLock()
 	defer gm.mu.RUnlock()
 
 	sortedNodeIDs := util.SortedKeys(gm.Nodes)
 	nodes := util.MapSlice(sortedNodeIDs, func(nodeID string) api.FullNode {
-		return *gm.Nodes[nodeID].Fetch()
+		return *gm.Nodes[nodeID].FetchFull()
 	})
 
 	return &api.FullGroup{

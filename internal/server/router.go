@@ -16,7 +16,7 @@ func setRouter(sm *store.StoreManager) *fiber.App {
 
 	apiGroup.Get("/messages", indexMessages)
 	apiGroup.Get("/groups", func(ctx *fiber.Ctx) error {
-		groups := sm.Fetch()
+		groups := sm.FetchFull()
 		ctx.JSON(groups)
 		return nil
 	})
