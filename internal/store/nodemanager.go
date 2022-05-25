@@ -4,55 +4,46 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/api"
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
 	"github.com/sirupsen/logrus"
 )
 
 // Manages the state of a single sparkplug EoN-Node
 type NodeManager struct {
+	MetricContainer
 	GroupID       string                    // The group this node belongs to
 	NodeID        string                    // The node ID
 	Online        bool                      // Whether the node is online
 	LastMessageAt time.Time                 // The last time a message was received regarding this node
 	Devices       map[string]*DeviceManager // The device managers for each device of this node (DeviceID -> DeviceManager)
-	Metrics       map[uint64]*Metric        // The metrics of this node (Alias -> Metric)
 
 	mu sync.RWMutex
-}
-
-// The data structure returned by the Fetch() method
-type FetchedNode struct {
-	ID            string          `json:"id"`            // The node ID
-	GroupID       string          `json:"groupId"`       // The group ID
-	Online        bool            `json:"online"`        // Whether the node is online
-	LastMessageAt time.Time       `json:"lastMessageAt"` // The last time a message was received regarding this node
-	Devices       []FetchedDevice `json:"devices"`       // The state of the devices
-	Metrics       []FetchedMetric `json:"metrics"`       // The metrics of this node
 }
 
 // Creates a new NodeManager for the given node
 func NewNodeManager(groupID, nodeID string) *NodeManager {
 	return &NodeManager{
-		GroupID:       groupID,
-		NodeID:        nodeID,
-		LastMessageAt: time.Now(),
-		Devices:       make(map[string]*DeviceManager),
-		Metrics:       make(map[uint64]*Metric),
+		MetricContainer: *NewMetricContainer(),
+		GroupID:         groupID,
+		NodeID:          nodeID,
+		LastMessageAt:   time.Now(),
+		Devices:         make(map[string]*DeviceManager),
 	}
 }
 
-func (nm *NodeManager) nodeBirth(msg Message) {
+func (nm *NodeManager) nodeBirth(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
 	if msg.Payload == nil {
 		logrus.Warnf("NBIRTH: Node %s got message with nil payload", nm.NodeID)
-		return
+		return nil
 	}
 
 	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
 		logrus.Warnf("NBIRTH: Node %s got message with no metrics (not even bdSeq)", nm.NodeID)
-		return
+		return nil
 	}
 
 	// TODO: Check for bdSeq
@@ -86,9 +77,19 @@ func (nm *NodeManager) nodeBirth(msg Message) {
 		}
 		nm.Metrics[*alias] = newMetric
 	}
+
+	// TODO
+	return &api.Event{
+		Event:     string(NodeBirth),
+		Timestamp: nm.LastMessageAt,
+		Data: api.NodeBirthEvent{
+			Node:        *nm.toApiNode(),
+			NodeMetrics: *nm.getMetrics(),
+		},
+	}
 }
 
-func (nm *NodeManager) nodeData(msg Message) {
+func (nm *NodeManager) nodeData(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -96,12 +97,12 @@ func (nm *NodeManager) nodeData(msg Message) {
 
 	if msg.Payload == nil {
 		logrus.Warnf("NDATA: Node %s got message with nil payload", nm.NodeID)
-		return
+		return nil
 	}
 
 	if msg.Payload.Metrics == nil || len(msg.Payload.Metrics) == 0 {
 		logrus.Warnf("NDATA: Node %s got message with no metrics", nm.NodeID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
@@ -130,9 +131,12 @@ func (nm *NodeManager) nodeData(msg Message) {
 			logrus.Warnf("NDATA: Node %s got an invalid metric with name %s: %v", nm.NodeID, currMetric.Name, err)
 		}
 	}
+
+	// TODO
+	return nil
 }
 
-func (nm *NodeManager) nodeDeath(msg Message) {
+func (nm *NodeManager) nodeDeath(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -146,9 +150,17 @@ func (nm *NodeManager) nodeDeath(msg Message) {
 	for _, device := range nm.Devices {
 		device.offline()
 	}
+
+	return &api.Event{
+		Event:     string(NodeDeath),
+		Timestamp: nm.LastMessageAt,
+		Data: &api.NodeDeathEvent{
+			Node: *nm.toApiNode(),
+		},
+	}
 }
 
-func (nm *NodeManager) deviceBirth(msg Message) {
+func (nm *NodeManager) deviceBirth(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -162,65 +174,78 @@ func (nm *NodeManager) deviceBirth(msg Message) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
 	deviceManager.deviceBirth(msg)
+
+	// TODO
+	return nil
 }
 
-func (nm *NodeManager) deviceData(msg Message) {
+func (nm *NodeManager) deviceData(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
 	deviceManager, ok := nm.Devices[msg.DeviceID]
 	if !ok {
 		logrus.Debugf("DDATA: Device %s is currently not in node %s", msg.NodeID, nm.NodeID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
 	deviceManager.deviceData(msg)
+
+	// TODO
+	return nil
 }
 
-func (nm *NodeManager) deviceDeath(msg Message) {
+func (nm *NodeManager) deviceDeath(msg Message) *api.Event {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
 	deviceManager, ok := nm.Devices[msg.DeviceID]
 	if !ok {
 		logrus.Debugf("DDEATH: Device %s is currently not in node %s", msg.NodeID, nm.NodeID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
 	deviceManager.deviceDeath(msg)
+
+	// TODO
+	return nil
 }
 
-// Returns the current state of the node and its devices
-func (nm *NodeManager) Fetch() *FetchedNode {
-	nm.mu.RLock()
-	defer nm.mu.RUnlock()
-
-	sortedDeviceIDs := util.SortedKeys(nm.Devices)
-	devices := make([]FetchedDevice, 0, len(nm.Devices))
-	for _, deviceID := range sortedDeviceIDs {
-		fetchedDevice := nm.Devices[deviceID].Fetch()
-		devices = append(devices, *fetchedDevice)
-	}
-
+func (nm *NodeManager) getMetrics() *[]api.Metric {
 	sortedAliases := util.SortedKeys(nm.Metrics)
-	metrics := make([]FetchedMetric, 0, len(nm.Metrics))
-	for _, alias := range sortedAliases {
-		fetchedMetric := nm.Metrics[alias].Fetch(!nm.Online)
-		metrics = append(metrics, *fetchedMetric)
-	}
+	return util.MapSlice(sortedAliases, func(alias uint64) api.Metric {
+		return *nm.Metrics[alias].Fetch(!nm.Online)
+	})
+}
 
-	return &FetchedNode{
+func (nm *NodeManager) toApiNode() *api.Node {
+	return &api.Node{
 		ID:            nm.NodeID,
 		GroupID:       nm.GroupID,
 		Online:        nm.Online,
 		LastMessageAt: nm.LastMessageAt,
-		Devices:       devices,
-		Metrics:       metrics,
+	}
+}
+
+// Returns the current state of the node and its devices
+func (nm *NodeManager) Fetch() *api.FullNode {
+	nm.mu.RLock()
+	defer nm.mu.RUnlock()
+
+	sortedDeviceIDs := util.SortedKeys(nm.Devices)
+	devices := util.MapSlice(sortedDeviceIDs, func(deviceID string) api.FullDevice {
+		return *nm.Devices[deviceID].Fetch()
+	})
+
+	return &api.FullNode{
+		Node:    *nm.toApiNode(),
+		Devices: *devices,
+		Metrics: *nm.fetchMetrics(!nm.Online),
 	}
 }

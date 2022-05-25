@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@mui/material";
 import React from "react";
-import { FetchedMessage } from "../api/message";
+import { FetchedMessage } from "./api/message";
 
 interface Props {
   messages: FetchedMessage[];
@@ -20,11 +20,13 @@ export const MessageLog: React.FC<Props> = ({ messages }) => (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }}>
         <TableHead>
-          <TableCell>Received At</TableCell>
-          <TableCell>Group Id</TableCell>
-          <TableCell>Node Id</TableCell>
-          <TableCell>Message Type</TableCell>
-          <TableCell>Device Id</TableCell>
+          <TableRow>
+            <TableCell>Received At</TableCell>
+            <TableCell>Group Id</TableCell>
+            <TableCell>Node Id</TableCell>
+            <TableCell>Message Type</TableCell>
+            <TableCell>Device Id</TableCell>
+          </TableRow>
         </TableHead>
         <TableBody>
           {messages.map((message) => (

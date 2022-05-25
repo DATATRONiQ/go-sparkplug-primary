@@ -17,6 +17,4 @@ export interface FetchedMessage {
   receivedAt: string;
 }
 
-export interface GetMessagesResponse {
-    data: FetchedMessage[];
-}
+export type GetMessagesResponse = FetchedMessage[];

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/api"
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
 	"github.com/sirupsen/logrus"
 )
@@ -17,13 +18,6 @@ type GroupManager struct {
 	mu sync.RWMutex
 }
 
-// The data structure returned by the Fetch() method
-type FetchedGroup struct {
-	ID            string        `json:"id"`            // The group ID
-	LastMessageAt time.Time     `json:"lastMessageAt"` // The last time a message was received regarding this group
-	Nodes         []FetchedNode `json:"nodes"`         // The state of the nodes in the group
-}
-
 // Creates a new group manager for the given group ID
 func NewGroupManager(groupID string) *GroupManager {
 	return &GroupManager{
@@ -33,7 +27,7 @@ func NewGroupManager(groupID string) *GroupManager {
 	}
 }
 
-func (gm *GroupManager) nodeBirth(msg Message) {
+func (gm *GroupManager) nodeBirth(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
@@ -46,104 +40,104 @@ func (gm *GroupManager) nodeBirth(msg Message) {
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.nodeBirth(msg)
+	return nodeManager.nodeBirth(msg)
 }
 
-func (gm *GroupManager) nodeData(msg Message) {
+func (gm *GroupManager) nodeData(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
 	nodeManager, ok := gm.Nodes[msg.NodeID]
 	if !ok {
 		logrus.Debugf("NDATA: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.nodeData(msg)
+	return nodeManager.nodeData(msg)
 }
 
-func (gm *GroupManager) nodeDeath(msg Message) {
+func (gm *GroupManager) nodeDeath(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
 	nodeManager, ok := gm.Nodes[msg.NodeID]
 	if !ok {
 		logrus.Debugf("NDEATH: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.nodeDeath(msg)
+	return nodeManager.nodeDeath(msg)
 }
 
-func (gm *GroupManager) deviceBirth(msg Message) {
+func (gm *GroupManager) deviceBirth(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
 	nodeManager, ok := gm.Nodes[msg.NodeID]
 	if !ok {
 		logrus.Debugf("DBIRTH: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.deviceBirth(msg)
+	return nodeManager.deviceBirth(msg)
 }
 
-func (gm *GroupManager) deviceData(msg Message) {
+func (gm *GroupManager) deviceData(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
 	nodeManager, ok := gm.Nodes[msg.NodeID]
 	if !ok {
 		logrus.Debugf("DDATA: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.deviceData(msg)
+	return nodeManager.deviceData(msg)
 }
 
-func (gm *GroupManager) deviceDeath(msg Message) {
+func (gm *GroupManager) deviceDeath(msg Message) *api.Event {
 	gm.mu.Lock()
 	defer gm.mu.Unlock()
 
 	nodeManager, ok := gm.Nodes[msg.NodeID]
 	if !ok {
 		logrus.Debugf("DDEATH: Node %s is currently not in group %s", msg.NodeID, gm.GroupID)
-		return
+		return nil
 	}
 
 	if msg.ReceivedAt.After(gm.LastMessageAt) {
 		gm.LastMessageAt = msg.ReceivedAt
 	}
-	nodeManager.deviceDeath(msg)
+	return nodeManager.deviceDeath(msg)
 }
 
 // Returns the current state of the group and its nodes
-func (gm *GroupManager) Fetch() *FetchedGroup {
+func (gm *GroupManager) Fetch() *api.FullGroup {
 	gm.mu.RLock()
 	defer gm.mu.RUnlock()
 
 	sortedNodeIDs := util.SortedKeys(gm.Nodes)
-	nodes := make([]FetchedNode, 0, len(gm.Nodes))
-	for _, nodeID := range sortedNodeIDs {
-		fetchedNode := gm.Nodes[nodeID].Fetch()
-		nodes = append(nodes, *fetchedNode)
-	}
+	nodes := util.MapSlice(sortedNodeIDs, func(nodeID string) api.FullNode {
+		return *gm.Nodes[nodeID].Fetch()
+	})
 
-	return &FetchedGroup{
-		ID:            gm.GroupID,
-		LastMessageAt: gm.LastMessageAt,
-		Nodes:         nodes,
+	return &api.FullGroup{
+		Group: api.Group{
+			ID:            gm.GroupID,
+			LastMessageAt: gm.LastMessageAt,
+		},
+		Nodes: *nodes,
 	}
 }

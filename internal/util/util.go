@@ -17,7 +17,7 @@ func Contains[T comparable](items []T, item T) bool {
 }
 
 // Returns a sorted slice of the keys of the given map
-func SortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
+func SortedKeys[K constraints.Ordered, V any](m map[K]V) *[]K {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
@@ -25,5 +25,17 @@ func SortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})
-	return keys
+	return &keys
+}
+
+// Maps a function over the given slice and returns a new slice with the results
+func MapSlice[T, R any](items *[]T, mapFunc func(T) R) *[]R {
+	if items == nil {
+		return nil
+	}
+	result := make([]R, 0, len(*items))
+	for _, item := range *items {
+		result = append(result, mapFunc(item))
+	}
+	return &result
 }

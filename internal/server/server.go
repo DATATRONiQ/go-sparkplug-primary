@@ -6,5 +6,5 @@ func Start(sm *store.StoreManager) {
 	router := setRouter(sm)
 
 	// Start listening and serving requests
-	router.Run(":8080")
+	router.Listen(":8080")
 }

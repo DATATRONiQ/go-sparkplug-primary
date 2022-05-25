@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/api"
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
 	"github.com/DATATRONiQ/go-sparkplug-primary/third_party/sparkplugb"
 )
 
@@ -16,14 +18,8 @@ type Metric struct {
 	Value         any
 }
 
-type FetchedMetric struct {
-	Name      string    `json:"name"`
-	Alias     uint64    `json:"alias"`
-	Stale     bool      `json:"stale"`
-	DataType  string    `json:"dataType"`
-	Timestamp time.Time `json:"timestamp"`
-	IsNull    bool      `json:"isNull"`
-	Value     any       `json:"value"`
+type MetricContainer struct {
+	Metrics map[uint64]*Metric // The metrics of this container (Alias -> Metric)
 }
 
 func NewMetric(metric *sparkplugb.Payload_Metric) (*Metric, error) {
@@ -64,6 +60,12 @@ func NewMetric(metric *sparkplugb.Payload_Metric) (*Metric, error) {
 	}
 
 	return &newMetric, err
+}
+
+func NewMetricContainer() *MetricContainer {
+	return &MetricContainer{
+		Metrics: make(map[uint64]*Metric),
+	}
 }
 
 func (m *Metric) addValue(metric *sparkplugb.Payload_Metric) error {
@@ -133,8 +135,8 @@ func (m *Metric) Update(metric *sparkplugb.Payload_Metric) error {
 	return m.addValue(metric)
 }
 
-func (m *Metric) Fetch(isStale bool) *FetchedMetric {
-	metric := FetchedMetric{
+func (m *Metric) Fetch(isStale bool) *api.Metric {
+	metric := api.Metric{
 		Name:     m.Name,
 		Alias:    m.Alias,
 		Stale:    isStale,
@@ -145,6 +147,12 @@ func (m *Metric) Fetch(isStale bool) *FetchedMetric {
 	if m.LastTimeStamp != nil {
 		metric.Timestamp = *m.LastTimeStamp
 	}
-	// TODO: add value
 	return &metric
+}
+
+func (mc *MetricContainer) fetchMetrics(isStale bool) *[]api.Metric {
+	sortedAliases := util.SortedKeys(mc.Metrics)
+	return util.MapSlice(sortedAliases, func(alias uint64) api.Metric {
+		return *mc.Metrics[alias].Fetch(isStale)
+	})
 }

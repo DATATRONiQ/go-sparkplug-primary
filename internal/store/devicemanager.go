@@ -4,40 +4,30 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DATATRONiQ/go-sparkplug-primary/internal/util"
+	"github.com/DATATRONiQ/go-sparkplug-primary/internal/api"
 	"github.com/sirupsen/logrus"
 )
 
 // Manages the state of a single sparkplug device
 type DeviceManager struct {
-	GroupID       string             // The group this device belongs to
-	NodeID        string             // The node this device belongs to
-	DeviceID      string             // The device ID
-	Online        bool               // Whether the device is online
-	LastMessageAt time.Time          // The last time a message was received regarding this device
-	Metrics       map[uint64]*Metric // The metrics of this device (Alias -> Metric)
+	MetricContainer
+	GroupID       string    // The group this device belongs to
+	NodeID        string    // The node this device belongs to
+	DeviceID      string    // The device ID
+	Online        bool      // Whether the device is online
+	LastMessageAt time.Time // The last time a message was received regarding this device
 
 	mu sync.RWMutex
-}
-
-// The data structure returned by the Fetch() method
-type FetchedDevice struct {
-	ID            string          `json:"id"`            // The device ID
-	NodeID        string          `json:"nodeId"`        // The node ID
-	GroupID       string          `json:"groupId"`       // The group ID
-	Online        bool            `json:"online"`        // Whether the device is online
-	LastMessageAt time.Time       `json:"lastMessageAt"` // The last time a message was received regarding this device
-	Metrics       []FetchedMetric `json:"metrics"`       // The metrics of this device
 }
 
 // Creates a new DeviceManager for the given device
 func NewDeviceManager(groupID, nodeID, deviceID string) *DeviceManager {
 	return &DeviceManager{
-		GroupID:       groupID,
-		NodeID:        nodeID,
-		DeviceID:      deviceID,
-		LastMessageAt: time.Now(),
-		Metrics:       make(map[uint64]*Metric),
+		MetricContainer: *NewMetricContainer(),
+		GroupID:         groupID,
+		NodeID:          nodeID,
+		DeviceID:        deviceID,
+		LastMessageAt:   time.Now(),
 	}
 }
 
@@ -132,23 +122,18 @@ func (dm *DeviceManager) offline() {
 }
 
 // Returns the current state of the device
-func (dm *DeviceManager) Fetch() *FetchedDevice {
+func (dm *DeviceManager) Fetch() *api.FullDevice {
 	dm.mu.RLock()
 	defer dm.mu.RUnlock()
 
-	sortedAliases := util.SortedKeys(dm.Metrics)
-	metrics := make([]FetchedMetric, 0, len(dm.Metrics))
-	for _, alias := range sortedAliases {
-		fetchedMetric := dm.Metrics[alias].Fetch(!dm.Online)
-		metrics = append(metrics, *fetchedMetric)
-	}
-
-	return &FetchedDevice{
-		ID:            dm.DeviceID,
-		NodeID:        dm.NodeID,
-		GroupID:       dm.GroupID,
-		Online:        dm.Online,
-		LastMessageAt: dm.LastMessageAt,
-		Metrics:       metrics,
+	return &api.FullDevice{
+		Device: api.Device{
+			ID:            dm.DeviceID,
+			NodeID:        dm.NodeID,
+			GroupID:       dm.GroupID,
+			Online:        dm.Online,
+			LastMessageAt: dm.LastMessageAt,
+		},
+		Metrics: *dm.fetchMetrics(!dm.Online),
 	}
 }

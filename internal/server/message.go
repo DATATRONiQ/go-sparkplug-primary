@@ -1,15 +1,12 @@
 package server
 
 import (
-	"net/http"
-
 	"github.com/DATATRONiQ/go-sparkplug-primary/internal/store"
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
-func indexMessages(ctx *gin.Context) {
+func indexMessages(ctx *fiber.Ctx) error {
 	messages := store.Fetch()
-	ctx.JSON(http.StatusOK, gin.H{
-		"data": messages,
-	})
+	ctx.JSON(messages)
+	return nil
 }
