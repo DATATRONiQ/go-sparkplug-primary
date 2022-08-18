@@ -7,34 +7,34 @@ interface BaseEvent {
 }
 
 export interface InitialEvent extends BaseEvent {
-  event: "INITIAL";
+  type: "INITIAL";
   data: {
     groups: FullGroup[];
   };
 }
 
 export interface NodeBirthEvent extends BaseEvent {
-  event: "NBIRTH";
+  type: "NBIRTH";
   data: {
     node: Node;
     nodeMetrics: Metric[];
   };
 }
 export interface NodeDataEvent extends BaseEvent {
-  event: "NDATA";
+  type: "NDATA";
   data: {
     node: Node;
     nodeMetrics: Metric[];
   };
 }
 export interface NodeDeathEvent extends BaseEvent {
-  event: "NDEATH";
+  type: "NDEATH";
   data: {
     node: Node;
   };
 }
 export interface DeviceBirthEvent extends BaseEvent {
-  event: "DBIRTH";
+  type: "DBIRTH";
   data: {
     node: Node;
     device: Device;
@@ -42,14 +42,15 @@ export interface DeviceBirthEvent extends BaseEvent {
   };
 }
 export interface DeviceDataEvent extends BaseEvent {
-  event: "DDATA";
+  type: "DDATA";
   data: {
     node: Node;
+    device: Device;
     deviceMetrics: Metric[];
   };
 }
 export interface DeviceDeathEvent extends BaseEvent {
-  event: "DDEATH";
+  type: "DDEATH";
   data: {
     node: Node;
     device: Device;
@@ -65,7 +66,7 @@ export type SparkplugEvent =
   | DeviceDataEvent
   | DeviceDeathEvent;
 
-export type EventType = SparkplugEvent["event"];
+export type EventType = SparkplugEvent["type"];
 
 /**
  * a helper record with two purposes:

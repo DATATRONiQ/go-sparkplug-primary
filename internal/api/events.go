@@ -3,7 +3,7 @@ package api
 import "time"
 
 type Event struct {
-	Event     string    `json:"event"`
+	Type      string    `json:"type"`
 	Data      any       `json:"data"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -39,6 +39,7 @@ type DeviceBirthEvent struct {
 // Server-Sent-Event when a valid DDATA message was received and handled
 type DeviceDataEvent struct {
 	Node          Node     `json:"node"`
+	Device        Device   `json:"device"`
 	DeviceMetrics []Metric `json:"deviceMetrics"`
 }
 

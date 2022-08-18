@@ -72,29 +72,30 @@ func (sh *SSEHandler) Subscribe(w *bufio.Writer) {
 		sh.closingClients <- messageChan
 	}()
 
-	logrus.Debug("Starting stream")
+	logrus.Trace("starting stream")
+
 	for event := range messageChan {
 		if event == nil {
-			logrus.Error("Received nil event")
+			logrus.Error("received nil event")
 			continue
 		}
 		bytes, err := json.Marshal(event)
 		if err != nil {
-			logrus.Errorf("Failed to marshal event: %v", err)
+			logrus.Errorf("failed to marshal event: %v", err)
 			return
 		}
-		logrus.Debug("Sending event")
+		logrus.Debug("sending event")
 		_, err = fmt.Fprintf(w, "data: %s\n\n", bytes)
 		if err != nil {
-			logrus.Errorf("Failed to write event: %v", err)
+			logrus.Errorf("failed to write event: %v", err)
 			return
 		}
 		err = w.Flush()
 		if err != nil {
-			logrus.Errorf("Failed to flush event: %v", err)
+			logrus.Errorf("failed to flush event: %v", err)
 			return
 		}
-		logrus.Debug("Flushed event")
+		logrus.Debug("flushed event")
 	}
-	logrus.Debugf("Client disconnected")
+	logrus.Debug("stopping stream")
 }

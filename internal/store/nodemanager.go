@@ -79,7 +79,7 @@ func (nm *NodeManager) nodeBirth(msg Message) *api.Event {
 	}
 
 	return &api.Event{
-		Event:     string(NodeBirth),
+		Type:      string(NodeBirth),
 		Timestamp: nm.LastMessageAt,
 		Data: api.NodeBirthEvent{
 			Node:        *nm.toApiNode(),
@@ -132,7 +132,7 @@ func (nm *NodeManager) nodeData(msg Message) *api.Event {
 	}
 
 	return &api.Event{
-		Event:     string(NodeData),
+		Type:      string(NodeData),
 		Timestamp: nm.LastMessageAt,
 		Data: api.NodeDataEvent{
 			Node:        *nm.toApiNode(),
@@ -157,7 +157,7 @@ func (nm *NodeManager) nodeDeath(msg Message) *api.Event {
 	}
 
 	return &api.Event{
-		Event:     string(NodeDeath),
+		Type:      string(NodeDeath),
 		Timestamp: nm.LastMessageAt,
 		Data: &api.NodeDeathEvent{
 			Node: *nm.toApiNode(),
@@ -186,7 +186,7 @@ func (nm *NodeManager) deviceBirth(msg Message) *api.Event {
 	}
 
 	return &api.Event{
-		Event:     string(DeviceBirth),
+		Type:      string(DeviceBirth),
 		Timestamp: nm.LastMessageAt,
 		Data: api.DeviceBirthEvent{
 			Node:          *nm.toApiNode(),
@@ -209,17 +209,18 @@ func (nm *NodeManager) deviceData(msg Message) *api.Event {
 	if msg.ReceivedAt.After(nm.LastMessageAt) {
 		nm.LastMessageAt = msg.ReceivedAt
 	}
-	deviceMetrics := deviceManager.deviceData(msg)
-	if deviceMetrics == nil {
+	fullDevice := deviceManager.deviceData(msg)
+	if fullDevice == nil {
 		return nil
 	}
 
 	return &api.Event{
-		Event:     string(DeviceData),
+		Type:      string(DeviceData),
 		Timestamp: nm.LastMessageAt,
 		Data: api.DeviceDataEvent{
 			Node:          *nm.toApiNode(),
-			DeviceMetrics: *deviceMetrics,
+			Device:        fullDevice.Device,
+			DeviceMetrics: fullDevice.Metrics,
 		},
 	}
 }
@@ -244,7 +245,7 @@ func (nm *NodeManager) deviceDeath(msg Message) *api.Event {
 	}
 
 	return &api.Event{
-		Event:     string(DeviceDeath),
+		Type:      string(DeviceDeath),
 		Timestamp: nm.LastMessageAt,
 		Data: api.DeviceDeathEvent{
 			Node:   *nm.toApiNode(),

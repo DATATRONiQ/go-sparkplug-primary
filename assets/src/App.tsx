@@ -8,8 +8,6 @@ import { MetricTable } from "./MetricTable/MetricTable";
 export const App: React.FC = () => {
   const [messages, setMessages] = useState<FetchedMessage[]>([]);
 
-  // TODO: Solve with server sent events (SSE) or websocket
-
   useEffect(() => {
     fetch("/api/messages")
       .then((res) => res.json())
@@ -28,4 +26,4 @@ export const App: React.FC = () => {
       </Grid>
     </div>
   );
-}
+};

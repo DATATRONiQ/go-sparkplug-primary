@@ -64,7 +64,7 @@ func (dm *DeviceManager) deviceBirth(msg Message) *api.FullDevice {
 	return dm.fetch()
 }
 
-func (dm *DeviceManager) deviceData(msg Message) *[]api.Metric {
+func (dm *DeviceManager) deviceData(msg Message) *api.FullDevice {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
@@ -105,7 +105,7 @@ func (dm *DeviceManager) deviceData(msg Message) *[]api.Metric {
 		}
 	}
 
-	return dm.fetchMetrics(!dm.Online)
+	return dm.fetch()
 }
 
 func (dm *DeviceManager) deviceDeath(msg Message) *api.Device {

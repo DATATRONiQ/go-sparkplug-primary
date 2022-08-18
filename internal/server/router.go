@@ -9,7 +9,7 @@ import (
 func setRouter(sm *store.StoreManager) *fiber.App {
 	app := fiber.New()
 
-	app.Static("/", "../../assets/build")
+	app.Static("/", "../../assets/build", fiber.Static{})
 
 	// Create API route group
 	apiGroup := app.Group("/api")
@@ -23,15 +23,14 @@ func setRouter(sm *store.StoreManager) *fiber.App {
 
 	apiGroup.Get("/groups/stream", func(ctx *fiber.Ctx) error {
 		ctx.Set("Content-Type", "text/event-stream")
-		ctx.Set("Cache-Control", "no-cache")
+		ctx.Set("Cache-Control", "no-cache,no-transform")
 		ctx.Set("Connection", "keep-alive")
 		ctx.Set("Access-Control-Allow-Origin", "*")
-		// TODO: Use context for cancellation after connection is closed
 		ctx.Context().SetBodyStreamWriter(fasthttp.StreamWriter(sm.GroupsSSEHandler.Subscribe))
 		return nil
 	})
 
-	app.Static("*", "./assets/build/index.html")
+	app.Static("*", "../../assets/build/index.html")
 
 	return app
 }
