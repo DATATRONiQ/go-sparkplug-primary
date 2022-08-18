@@ -4,6 +4,8 @@ import { MessageLog } from "./MessageLog";
 import { FetchedMessage, GetMessagesResponse } from "./api/message";
 import { Grid } from "@mui/material";
 import { MetricTable } from "./MetricTable/MetricTable";
+import { GroupTable } from "./MetricTable/GroupTable";
+import { useSSE } from "./store/useSSE";
 
 export const App: React.FC = () => {
   const [messages, setMessages] = useState<FetchedMessage[]>([]);
@@ -14,10 +16,13 @@ export const App: React.FC = () => {
       .then((resJson: GetMessagesResponse) => setMessages(resJson));
   }, []);
 
+  useSSE();
+
   return (
     <div className="App">
       <Grid container spacing={2}>
         <Grid item xs={12} lg={8}>
+          <GroupTable />
           <MetricTable />
         </Grid>
         <Grid item xs={12} lg={4}>
